@@ -3,7 +3,7 @@
 A Photoshop ExtendScript that exports Instagram-ready layout composites from your PSD files. Supports single images, stacked doubles, and 2×2 grids — in portrait (3:4, 4:5) and square formats — with automatic orientation detection, crop position control, and optional sharpening.
 
 <p align="center">
-  <img src="public/image1.png" width="40%"/>
+  <img src="public/image1.png" width="60%"/>
 </p>
 
 ---
