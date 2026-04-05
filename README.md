@@ -17,7 +17,7 @@ git clone https://github.com/SamuelJon17/photoshop-resize.git
 
 **Option B: Download the file directly**
 
-1. Open [userScript_layouts_v21.jsx](userScript_layouts_v21.jsx) in GitHub
+1. Open [PhotoLayouts.jsx](PhotoLayouts.jsx) in GitHub
 2. Click the **Download raw file** button (top-right of the file view)
 3. Save the `.jsx` file anywhere on your computer
 
@@ -25,14 +25,14 @@ git clone https://github.com/SamuelJon17/photoshop-resize.git
 
 ### Step 2 — Add the script to Photoshop
 
-Copy `userScript_layouts_v21.jsx` into Photoshop's **Scripts** folder so it appears in the menu permanently.
+Copy `PhotoLayouts.jsx` into Photoshop's **Scripts** folder so it appears in the menu permanently.
 
 | Platform | Scripts folder path |
 |---|---|
 | **Mac** | `/Applications/Adobe Photoshop [version]/Presets/Scripts/` |
 | **Windows** | `C:\Program Files\Adobe\Adobe Photoshop [version]\Presets\Scripts\` |
 
-After copying, **restart Photoshop**. The script will appear under **File > Scripts > userScript_layouts_v21**.
+After copying, **restart Photoshop**. The script will appear under **File > Scripts > PhotoLayouts**.
 
 > You only need to do this once. After that, it's always available from the menu without browsing for the file.
 
@@ -42,7 +42,7 @@ After copying, **restart Photoshop**. The script will appear under **File > Scri
 
 ### From the Scripts menu (after installation)
 
-**File > Scripts > userScript_layouts_v21**
+**File > Scripts > PhotoLayouts**
 
 ### Without installing (one-off)
 
@@ -70,14 +70,16 @@ Choose the output dimensions:
 |---|---|
 | **Single (Auto)** | Detects orientation per image — vertical images are width-fit with crop control; horizontal images are letterboxed |
 | **Double Horizontal** | Pairs two landscape photos stacked top/bottom in one canvas |
+| **Double Vertical** | Pairs two portrait photos side by side in one canvas |
 | **2×2 Grid** | Groups four portrait photos into a 2-column grid |
 
 **Double Horizontal** requires landscape (wider-than-tall) images. Verticals are skipped with a warning.  
+**Double Vertical** requires portrait (taller-than-wide) images. Horizontals are skipped with a warning.  
 **2×2 Grid** requires portrait (taller-than-wide) images. Horizontals are skipped with a warning. Groups must be in multiples of 4.
 
-### Single Auto options
+### Vertical crop options
 
-**Vertical crop position** — only applies to vertical source images. Sets where to anchor the crop when the image is taller than the canvas slot.
+**Vertical crop position** — applies to vertical source images in Single (Auto) and Double Vertical modes. Sets where to anchor the crop when the image is taller than the canvas slot.
 
 - `0` = anchor top (overflow cut from bottom)
 - `50` = center (default)
@@ -98,6 +100,7 @@ When **Fill** is selected, a **Position** field controls crop placement (0 = top
 - **Process entire folder** — scans a folder for `.psd` files and processes all of them
 
 For **Double Horizontal**, select files in pairs: top, bottom, top, bottom...  
+For **Double Vertical**, select files in pairs: left, right, left, right...  
 For **2×2 Grid**, select files in groups of 4: top-left, top-right, bottom-left, bottom-right...
 
 ### Save location
@@ -111,7 +114,7 @@ For **2×2 Grid**, select files in groups of 4: top-left, top-right, bottom-left
 |---|---|---|
 | White border | 20 px | Padding between image and canvas edge |
 | Sharpen for screen | Off | Applies a light Unsharp Mask (25 / 0.5 / 0) before export |
-| Close after export | Off | Closes the canvas document after saving |
+| Close after export | On | Closes the canvas document after saving |
 
 ---
 
@@ -125,6 +128,7 @@ Files are exported as JPEG at 100% quality, sRGB, no embedded profile. The outpu
 | Single horizontal | `photo_layoutHorizontal_4x5.jpg` |
 | Square | `photo_layoutSquare_1440.jpg` |
 | Double horizontal | `photo_layoutDouble_3x4.jpg` |
+| Double vertical | `photo_layoutDoubleVert_3x4.jpg` |
 | 2×2 Grid | `photo_layoutGrid_4x5.jpg` |
 
 ---

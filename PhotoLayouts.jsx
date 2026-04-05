@@ -1,4 +1,3 @@
-// userScript_layouts_v21.jsx
 // Photoshop ExtendScript — Instagram layout export tool
 // Run via File > Scripts > Browse...
 //
@@ -56,6 +55,7 @@ function showDialog() {
     // var r1 = modeGroup.add("radiobutton", undefined, "Single Vertical  --  fills canvas (cover crop)");
     // var r2 = modeGroup.add("radiobutton", undefined, "Single Horizontal  --  letterboxed in canvas");
     var r3 = modeGroup.add("radiobutton", undefined, "Double Horizontal  --  2 landscape photos stacked");
+    var r5 = modeGroup.add("radiobutton", undefined, "Double Vertical  --  2 portrait photos side by side");
     var r4 = modeGroup.add("radiobutton", undefined, "2x2 Grid  --  4 photos");
     r0.value = true;
 
@@ -67,6 +67,10 @@ function showDialog() {
         selectedMode = "double_horizontal";
         singleAutoPanel.enabled = false;
     };
+    r5.onClick = function() {
+        selectedMode = "double_vertical";
+        singleAutoPanel.enabled = true;  // shares vertical crop options
+    };
     r4.onClick = function() {
         selectedMode = "quad_grid";
         singleAutoPanel.enabled = false;
@@ -75,7 +79,7 @@ function showDialog() {
     dlg.add("panel").alignment = "fill";
 
     // -- Single Auto options panel (enabled only when Single Auto + non-square) --
-    var singleAutoPanel = dlg.add("panel", undefined, "Single Auto options");
+    var singleAutoPanel = dlg.add("panel", undefined, "Vertical crop options");
     singleAutoPanel.orientation = "column";
     singleAutoPanel.alignChildren = ["left", "top"];
     singleAutoPanel.spacing = 8;
@@ -128,15 +132,15 @@ function showDialog() {
     // -- Canvas type onClick handlers (defined after panels exist) --
     a1.onClick = function() {
         selectedRatio = "3:4";
-        layoutSection.enabled  = true;
-        singleAutoPanel.enabled = (selectedMode === "single_auto");
-        squarePanel.enabled    = false;
+        layoutSection.enabled   = true;
+        singleAutoPanel.enabled = (selectedMode === "single_auto" || selectedMode === "double_vertical");
+        squarePanel.enabled     = false;
     };
     a2.onClick = function() {
         selectedRatio = "4:5";
-        layoutSection.enabled  = true;
-        singleAutoPanel.enabled = (selectedMode === "single_auto");
-        squarePanel.enabled    = false;
+        layoutSection.enabled   = true;
+        singleAutoPanel.enabled = (selectedMode === "single_auto" || selectedMode === "double_vertical");
+        squarePanel.enabled     = false;
     };
     aS.onClick = function() {
         selectedRatio = "square";
@@ -186,13 +190,13 @@ function showDialog() {
     var borderGroup = optRow.add("group");
     borderGroup.add("statictext", undefined, "White border (px):");
     var borderInput = borderGroup.add("edittext", undefined, "20");
-    borderInput.preferredSize.width = 50;
+    borderInput.preferredSize.width = 0;
 
     var sharpenCheck = optRow.add("checkbox", undefined, "Sharpen for screen");
     sharpenCheck.value = false;
 
     var closeCheck = optRow.add("checkbox", undefined, "Close after export");
-    closeCheck.value = false;
+    closeCheck.value = true;
 
     // -- Buttons --
     var btnGroup = dlg.add("group");
@@ -518,6 +522,68 @@ function batchSquare(files, config) {
     }
 }
 
+// Two portrait photos side by side on a portrait canvas.
+// Each photo is width-fit to its slot with vertical position offset — no forced cropping
+// unless the source photo is taller than the slot at the fitted width.
+// Horizontal images are filtered out with a warning.
+function batchDoubleVertical(files, config) {
+    var B      = config.border;
+    var W      = config.canvasW;
+    var H      = config.canvasH;
+    var slotW  = Math.floor((W - 3 * B) / 2);
+    var photoH = H - 2 * B;
+
+    // Filter out horizontals — double vertical requires portrait shots
+    var skippedVert   = [];
+    var portraitFiles = [];
+    for (var f = 0; f < files.length; f++) {
+        var chk   = app.open(files[f]);
+        var horiz = chk.width.value >= chk.height.value;
+        chk.close(SaveOptions.DONOTSAVECHANGES);
+        if (horiz) { skippedVert.push(files[f].name); }
+        else        { portraitFiles.push(files[f]); }
+    }
+
+    for (var i = 0; i + 1 < portraitFiles.length; i += 2) {
+        try {
+            var fileA        = portraitFiles[i];
+            var fileB        = portraitFiles[i + 1];
+            var baseName     = fileA.name.replace(/\.[^\.]+$/, "");
+            var outputFolder = resolveOutputFolder(fileA, config.customFolder);
+
+            var src0 = app.open(fileA);
+            src0.flatten();
+
+            var canvas = createCanvas(W, H, baseName + "_canvas");
+            app.activeDocument = src0;
+            src0.activeLayer.duplicate(canvas, ElementPlacement.PLACEATBEGINNING);
+            src0.close(SaveOptions.DONOTSAVECHANGES);
+            app.activeDocument = canvas;
+
+            // Left photo — slot starts at (B, B)
+            var layer1 = canvas.layers[0];
+            placeAndFitVertical(layer1, canvas, B, B, slotW, photoH, config.vertOffset);
+            if (config.sharpen) sharpenLayer(layer1, canvas);
+
+            // Right photo — slot starts at (B + slotW + B, B)
+            var layer2 = bringLayerToCanvas(fileB, canvas);
+            placeAndFitVertical(layer2, canvas, B + slotW + B, B, slotW, photoH, config.vertOffset);
+            if (config.sharpen) sharpenLayer(layer2, canvas);
+
+            exportJPEG(canvas, outputFolder, baseName + "_layoutDoubleVert_" + config.ratio.replace(":", "x") + ".jpg", config.closeCanvas);
+        } catch (e) {
+            alert("Error in double vertical (pair " + (Math.floor(i/2) + 1) + "): " + e.message);
+        }
+    }
+
+    if (portraitFiles.length % 2 !== 0) {
+        alert("Note: " + portraitFiles[portraitFiles.length - 1].name + " was skipped (no pair — odd number of portrait files).");
+    }
+    if (skippedVert.length > 0) {
+        alert("Skipped (horizontal images not allowed in Double Vertical):\n" + skippedVert.join("\n"));
+    }
+}
+
 function batchDoubleHorizontal(files, config) {
     var B      = config.border;
     var W      = config.canvasW;
@@ -660,11 +726,13 @@ if (config) {
     } else {
         var minFiles;
         if      (config.mode === "double_horizontal") { minFiles = 2; }
+        else if (config.mode === "double_vertical")   { minFiles = 2; }
         else if (config.mode === "quad_grid")         { minFiles = 4; }
         else                                          { minFiles = 1; }
 
         var filePrompt;
         if      (config.mode === "double_horizontal") { filePrompt = "Select images in order (pairs: top, bottom, top, bottom...)"; }
+        else if (config.mode === "double_vertical")   { filePrompt = "Select images in order (pairs: left, right, left, right...)"; }
         else if (config.mode === "quad_grid")         { filePrompt = "Select images in order (groups of 4: TL, TR, BL, BR...)"; }
         else                                          { filePrompt = "Select photos to export"; }
 
@@ -699,6 +767,8 @@ if (config) {
             batchSquare(files, config);
         } else if (config.mode === "double_horizontal") {
             batchDoubleHorizontal(files, config);
+        } else if (config.mode === "double_vertical") {
+            batchDoubleVertical(files, config);
         } else if (config.mode === "quad_grid") {
             batchQuadGrid(files, config);
         }
