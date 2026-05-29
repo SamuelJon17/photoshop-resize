@@ -2,9 +2,9 @@
 // Run via File > Scripts > Browse...
 //
 // Aspect ratio options (non-square):
-//   3:4  — 1440x1920  (new Instagram grid, optimal for desktop upload)
-//   4:5  — 1440x1800  (classic portrait, still widely used)
-// Square: always 1440x1440
+//   3:4  — width x (width*4/3)  e.g. 1080x1440 or 1440x1920
+//   4:5  — width x (width*5/4)  e.g. 1080x1350 or 1440x1800
+// Square: always width x width
 
 app.preferences.rulerUnits = Units.PIXELS;
 
@@ -24,14 +24,27 @@ function showDialog() {
     dlg.spacing = 12;
     dlg.margins = 18;
 
-    // -- Canvas type (top row: 3:4 / 4:5 / Square) --
+    // -- Width --
+    dlg.add("statictext", undefined, "Width:");
+    var widthGroup = dlg.add("group");
+    widthGroup.orientation = "row";
+    widthGroup.spacing = 20;
+    var w1 = widthGroup.add("radiobutton", undefined, "1080 px  (recommended — Instagram native, no resampling)");
+    var w2 = widthGroup.add("radiobutton", undefined, "1440 px");
+    w1.value = true;
+
+    var selectedWidth = 1080;
+
+    dlg.add("panel").alignment = "fill";
+
+    // -- Canvas type (3:4 / 4:5 / Square) — labels update when width changes --
     dlg.add("statictext", undefined, "Canvas:");
     var canvasTypeGroup = dlg.add("group");
     canvasTypeGroup.orientation = "row";
     canvasTypeGroup.spacing = 20;
-    var a1 = canvasTypeGroup.add("radiobutton", undefined, "3:4  --  1440 x 1920");
-    var a2 = canvasTypeGroup.add("radiobutton", undefined, "4:5  --  1440 x 1800");
-    var aS = canvasTypeGroup.add("radiobutton", undefined, "Square  --  1440 x 1440");
+    var a1 = canvasTypeGroup.add("radiobutton", undefined, "3:4  --  1080 x 1440");
+    var a2 = canvasTypeGroup.add("radiobutton", undefined, "4:5  --  1080 x 1350");
+    var aS = canvasTypeGroup.add("radiobutton", undefined, "Square  --  1080 x 1080");
     a1.value = true;
 
     var selectedRatio  = "3:4";
@@ -51,9 +64,6 @@ function showDialog() {
     modeGroup.alignChildren = ["left", "top"];
     modeGroup.spacing = 6;
     var r0 = modeGroup.add("radiobutton", undefined, "Single (Auto)  --  detects horizontal/vertical per image");
-    // DEPRECATED: r1 (single_vertical) and r2 (single_horizontal) removed from GUI but code preserved below
-    // var r1 = modeGroup.add("radiobutton", undefined, "Single Vertical  --  fills canvas (cover crop)");
-    // var r2 = modeGroup.add("radiobutton", undefined, "Single Horizontal  --  letterboxed in canvas");
     var r3 = modeGroup.add("radiobutton", undefined, "Double Horizontal  --  2 landscape photos stacked");
     var r5 = modeGroup.add("radiobutton", undefined, "Double Vertical  --  2 portrait photos side by side");
     var r4 = modeGroup.add("radiobutton", undefined, "2x2 Grid  --  4 photos");
@@ -129,6 +139,20 @@ function showDialog() {
 
     dlg.add("panel").alignment = "fill";
 
+    // -- Width onClick handlers (defined after canvas ratio buttons exist) --
+    w1.onClick = function() {
+        selectedWidth = 1080;
+        a1.text = "3:4  --  1080 x 1440";
+        a2.text = "4:5  --  1080 x 1350";
+        aS.text = "Square  --  1080 x 1080";
+    };
+    w2.onClick = function() {
+        selectedWidth = 1440;
+        a1.text = "3:4  --  1440 x 1920";
+        a2.text = "4:5  --  1440 x 1800";
+        aS.text = "Square  --  1440 x 1440";
+    };
+
     // -- Canvas type onClick handlers (defined after panels exist) --
     a1.onClick = function() {
         selectedRatio = "3:4";
@@ -192,8 +216,23 @@ function showDialog() {
     var borderInput = borderGroup.add("edittext", undefined, "20");
     borderInput.preferredSize.width = 0;
 
-    var sharpenCheck = optRow.add("checkbox", undefined, "Sharpen for screen");
+    // Sharpen checkbox + Standard / High radios
+    var sharpenGroup = optRow.add("group");
+    sharpenGroup.orientation = "row";
+    sharpenGroup.spacing = 8;
+    sharpenGroup.alignChildren = ["left", "center"];
+    var sharpenCheck = sharpenGroup.add("checkbox", undefined, "Sharpen for screen:");
     sharpenCheck.value = false;
+    var usmStd  = sharpenGroup.add("radiobutton", undefined, "Standard");
+    var usmHigh = sharpenGroup.add("radiobutton", undefined, "High");
+    usmStd.value   = true;
+    usmStd.enabled  = false;
+    usmHigh.enabled = false;
+
+    sharpenCheck.onClick = function() {
+        usmStd.enabled  = sharpenCheck.value;
+        usmHigh.enabled = sharpenCheck.value;
+    };
 
     var closeCheck = optRow.add("checkbox", undefined, "Close after export");
     closeCheck.value = true;
@@ -223,14 +262,17 @@ function showDialog() {
     if (sqPos < 0)    sqPos = 0;
     if (sqPos > 100)  sqPos = 100;
 
-    // Resolve canvas dimensions
+    // Resolve canvas dimensions from selected width + ratio
     var canvasW, canvasH, resolvedMode;
     if (selectedRatio === "square") {
-        canvasW = 1440; canvasH = 1440;
+        canvasW = selectedWidth;
+        canvasH = selectedWidth;
         resolvedMode = "square";
     } else {
-        canvasW = 1440;
-        canvasH = (selectedRatio === "4:5") ? 1800 : 1920;
+        canvasW = selectedWidth;
+        canvasH = (selectedRatio === "4:5")
+            ? Math.round(selectedWidth * (5 / 4))
+            : Math.round(selectedWidth * (4 / 3));
         resolvedMode = selectedMode;
     }
 
@@ -240,6 +282,7 @@ function showDialog() {
         save:        selectedSave,
         border:      border,
         sharpen:     sharpenCheck.value,
+        usmAmount:   usmHigh.value ? 50 : 25,
         closeCanvas: closeCheck.value,
         canvasW:     canvasW,
         canvasH:     canvasH,
@@ -377,11 +420,13 @@ function placeAndFitHorizontal(layer, canvas, x, y, w, h, offsetPct) {
 }
 
 // applyUnsharpMask is unreliable across PS versions — drive via executeAction.
-function sharpenLayer(layer, canvas) {
+// amount: USM Amount %; defaults to global USM_AMOUNT (25) if not supplied.
+function sharpenLayer(layer, canvas, amount) {
     canvas.activeLayer = layer;
+    if (amount === undefined) amount = USM_AMOUNT;
 
     var desc = new ActionDescriptor();
-    desc.putUnitDouble(charIDToTypeID("Amnt"), charIDToTypeID("#Prc"), USM_AMOUNT);
+    desc.putUnitDouble(charIDToTypeID("Amnt"), charIDToTypeID("#Prc"), amount);
     desc.putUnitDouble(charIDToTypeID("Rds "), charIDToTypeID("#Pxl"), USM_RADIUS);
     desc.putInteger(charIDToTypeID("Thsh"),                             USM_THRESHOLD);
     executeAction(stringIDToTypeID("unsharpMask"), desc, DialogModes.NO);
@@ -458,7 +503,7 @@ function processSingleFile(file, config) {
     } else {
         placeAndFit(layer, canvas, B, B, CW - 2 * B, CH - 2 * B, fitMode);
     }
-    if (config.sharpen) sharpenLayer(layer, canvas);
+    if (config.sharpen) sharpenLayer(layer, canvas, config.usmAmount);
 
     exportJPEG(canvas, outputFolder, baseName + suffix + ".jpg", config.closeCanvas);
 }
@@ -476,7 +521,7 @@ function batchSingle(files, config) {
 // Square layout — auto-detects orientation and applies fit or fill accordingly.
 function processSquareFile(file, config) {
     var B            = config.border;
-    var SQ           = 1440;
+    var SQ           = config.canvasW;
     var src          = app.open(file);
     src.flatten();
     var srcW         = src.width.value;
@@ -508,8 +553,8 @@ function processSquareFile(file, config) {
         placeAndFitHorizontal(layer, canvas, B, B, slotW, slotH, config.sqPos);
     }
 
-    if (config.sharpen) sharpenLayer(layer, canvas);
-    exportJPEG(canvas, outputFolder, baseName + "_layoutSquare_1440.jpg", config.closeCanvas);
+    if (config.sharpen) sharpenLayer(layer, canvas, config.usmAmount);
+    exportJPEG(canvas, outputFolder, baseName + "_layoutSquare_" + SQ + ".jpg", config.closeCanvas);
 }
 
 function batchSquare(files, config) {
@@ -563,12 +608,12 @@ function batchDoubleVertical(files, config) {
             // Left photo — slot starts at (B, B)
             var layer1 = canvas.layers[0];
             placeAndFitVertical(layer1, canvas, B, B, slotW, photoH, config.vertOffset);
-            if (config.sharpen) sharpenLayer(layer1, canvas);
+            if (config.sharpen) sharpenLayer(layer1, canvas, config.usmAmount);
 
             // Right photo — slot starts at (B + slotW + B, B)
             var layer2 = bringLayerToCanvas(fileB, canvas);
             placeAndFitVertical(layer2, canvas, B + slotW + B, B, slotW, photoH, config.vertOffset);
-            if (config.sharpen) sharpenLayer(layer2, canvas);
+            if (config.sharpen) sharpenLayer(layer2, canvas, config.usmAmount);
 
             exportJPEG(canvas, outputFolder, baseName + "_layoutDoubleVert_" + config.ratio.replace(":", "x") + ".jpg", config.closeCanvas);
         } catch (e) {
@@ -618,11 +663,11 @@ function batchDoubleHorizontal(files, config) {
 
             var layer1 = canvas.layers[0];
             placeAndFit(layer1, canvas, B, B, photoW, slotH, "cover");
-            if (config.sharpen) sharpenLayer(layer1, canvas);
+            if (config.sharpen) sharpenLayer(layer1, canvas, config.usmAmount);
 
             var layer2 = bringLayerToCanvas(landscapeFiles[i + 1], canvas);
             placeAndFit(layer2, canvas, B, B + slotH + B, photoW, slotH, "cover");
-            if (config.sharpen) sharpenLayer(layer2, canvas);
+            if (config.sharpen) sharpenLayer(layer2, canvas, config.usmAmount);
 
             exportJPEG(canvas, outputFolder, baseName + "_layoutDouble_" + config.ratio.replace(":", "x") + ".jpg", config.closeCanvas);
         } catch (e) {
@@ -680,13 +725,13 @@ function batchQuadGrid(files, config) {
             var c0     = cells[0];
             var layer0 = canvas.layers[0];
             placeAndFit(layer0, canvas, c0[0], c0[1], c0[2], c0[3], "cover");
-            if (config.sharpen) sharpenLayer(layer0, canvas);
+            if (config.sharpen) sharpenLayer(layer0, canvas, config.usmAmount);
 
             for (var j = 1; j < 4; j++) {
                 var layer = bringLayerToCanvas(portraitFiles[i + j], canvas);
                 var c = cells[j];
                 placeAndFit(layer, canvas, c[0], c[1], c[2], c[3], "cover");
-                if (config.sharpen) sharpenLayer(layer, canvas);
+                if (config.sharpen) sharpenLayer(layer, canvas, config.usmAmount);
             }
 
             exportJPEG(canvas, outputFolder, baseName + "_layoutGrid_" + config.ratio.replace(":", "x") + ".jpg", config.closeCanvas);
@@ -772,15 +817,5 @@ if (config) {
         } else if (config.mode === "quad_grid") {
             batchQuadGrid(files, config);
         }
-        // DEPRECATED cases preserved below for reference:
-        // } else if (config.mode === "single_vertical") {
-        //     config.fitMode = "cover";
-        //     config.suffix  = "_layoutSingle_" + config.ratio.replace(":", "x");
-        //     batchSingle(files, config);
-        // } else if (config.mode === "single_horizontal") {
-        //     config.fitMode = "fit";
-        //     config.suffix  = "_layoutHorizontal_" + config.ratio.replace(":", "x");
-        //     batchSingle(files, config);
-        // }
     }
 }
