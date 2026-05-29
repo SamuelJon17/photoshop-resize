@@ -56,15 +56,24 @@ After copying, **restart Photoshop**. The script will appear under **File > Scri
 
 When you run the script a dialog appears with the following options:
 
+### Width
+
+Choose the canvas width. This affects all layouts.
+
+| Option | Notes |
+|---|---|
+| **1080 px** (default) | Instagram's native feed resolution — no resampling on upload |
+| **1440 px** | Higher resolution; Instagram will downsample on upload |
+
 ### Canvas
 
-Choose the output dimensions:
+Choose the aspect ratio. Heights are derived from the selected width:
 
-| Option | Size |
-|---|---|
-| 3:4 | 1440 × 1920 px |
-| 4:5 | 1440 × 1800 px |
-| Square | 1440 × 1440 px |
+| Option | 1080 px wide | 1440 px wide |
+|---|---|---|
+| **3:4** | 1080 × 1440 | 1440 × 1920 |
+| **4:5** | 1080 × 1350 | 1440 × 1800 |
+| **Square** | 1080 × 1080 | 1440 × 1440 |
 
 ### Layout mode
 
@@ -115,7 +124,7 @@ For **2×2 Grid**, select files in groups of 4: top-left, top-right, bottom-left
 | Option | Default | Description |
 |---|---|---|
 | White border | 20 px | Padding between image and canvas edge |
-| Sharpen for screen | Off | Applies a light Unsharp Mask (25 / 0.5 / 0) before export |
+| Sharpen for screen | Off | Applies Unsharp Mask before export; choose **Standard** (USM 25/0.5/0, equivalent to Lightroom "Screen Standard") or **High** (USM 50/0.5/0) for aggressive compression like Instagram |
 | Close after export | On | Closes the canvas document after saving |
 
 ---
@@ -128,7 +137,7 @@ Files are exported as JPEG at 100% quality, sRGB, no embedded profile. The outpu
 |---|---|
 | Single vertical | `photo_layoutSingle_3x4.jpg` |
 | Single horizontal | `photo_layoutHorizontal_4x5.jpg` |
-| Square | `photo_layoutSquare_1440.jpg` |
+| Square | `photo_layoutSquare_1080.jpg` (or `_1440` if 1440 px selected) |
 | Double horizontal | `photo_layoutDouble_3x4.jpg` |
 | Double vertical | `photo_layoutDoubleVert_3x4.jpg` |
 | 2×2 Grid | `photo_layoutGrid_4x5.jpg` |
